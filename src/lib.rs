@@ -1,4 +1,4 @@
-#![feature(target_feature, cfg_target_feature, stdsimd)]
+#![feature(stdsimd)]
 
 use std::ptr;
 use std::slice;
@@ -109,6 +109,7 @@ pub unsafe fn encode_scalar(input: &[u64], keys: &mut [u8], data: &mut [u8]) -> 
     written
 }
 
+#[cfg(target_feature = "avx2")]
 #[target_feature(enable = "avx2")]
 unsafe fn encode_block_avx(ptr: &mut *mut u8, value: __m256i) -> u32 {
     // turn each byte into a 0 or 1 based on it being nonzero
@@ -189,6 +190,7 @@ unsafe fn encode_block_avx(ptr: &mut *mut u8, value: __m256i) -> u32 {
     code
 }
 
+#[cfg(target_feature = "avx2")]
 #[target_feature(enable = "avx2")]
 pub unsafe fn encode_avx(input: &[u64], keys: &mut [u8], data: &mut [u8]) -> usize {
     debug_assert!(keys.len() >= keys_len(input.len()));
@@ -375,10 +377,16 @@ pub fn encode(input: &[u64], buf: &mut [u8]) -> usize {
         let keys_len = keys_len(input.len());
         let (keys, data) = buf.split_at_mut(keys_len);
 
-        let written = if is_x86_feature_detected!("avx2") {
-            encode_avx(input, keys, data)
-        } else {
-            encode_scalar(input, keys, data)
+        let written = {//if is_x86_feature_detected!("avx2") {
+            #[cfg(target_feature = "avx2")]
+            {
+                encode_avx(input, keys, data)
+            }
+        //} else {
+            #[cfg(not(target_feature = "avx2"))]
+            {
+                encode_scalar(input, keys, data)
+            }
         };
 
         keys_len + written
@@ -392,11 +400,19 @@ pub fn decode(output: &mut [u64], buf: &[u8]) -> usize {
         let data_len = compressed_data_len(output.len(), keys);
         assert!(data.len() >= data_len, "{} < {}", data.len(), data_len);
 
-        if is_x86_feature_detected!("avx2") {
-            decode_avx(output, keys, data)
-        } else {
-            decode_scalar(output, keys, data)
-        }
+        //if is_x86_feature_detected!("avx2") {
+        let n = {
+            #[cfg(target_feature = "avx2")]
+            {
+                decode_avx(output, keys, data)
+            }
+
+            #[cfg(not(target_feature = "avx2"))]
+            {
+                decode_scalar(output, keys, data)
+            }
+        };
+        n
     }
 }
 
@@ -457,6 +473,7 @@ mod test {
         }
     }
 
+    #[cfg(target_feature = "avx2")]
     #[test]
     fn match_encode() {
         unsafe {
