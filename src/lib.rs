@@ -132,7 +132,7 @@ unsafe fn encode_block_avx(ptr: &mut *mut u8, value: __m256i) -> u32 {
 
   // use that as the mask vector to select the lane code
   // first the low half
-  #[cfg_attr(rustfmt, rustfmt_skip)]
+  #[rustfmt::skip]
     let low_lane_codes = _mm256_setr_epi8(
         0, 3, 2, 3, 1, 3, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1,
         0, 3, 2, 3, 1, 3, 2, 3, -1, -1, -1, -1, -1, -1, -1, -1,
@@ -141,7 +141,7 @@ unsafe fn encode_block_avx(ptr: &mut *mut u8, value: __m256i) -> u32 {
   let low_shifted_codes = _mm256_slli_epi64(low_shuffled_codes, 32);
 
   // now the high half
-  #[cfg_attr(rustfmt, rustfmt_skip)]
+  #[rustfmt::skip]
     let high_lane_codes = _mm256_setr_epi8(
         0, 7, 6, 7, 5, 7, 6, 7, 4, 7, 6, 7, 5, 7, 6, 7,
         0, 7, 6, 7, 5, 7, 6, 7, 4, 7, 6, 7, 5, 7, 6, 7,
@@ -152,7 +152,7 @@ unsafe fn encode_block_avx(ptr: &mut *mut u8, value: __m256i) -> u32 {
   let lane_codes = _mm256_max_epu8(low_shifted_codes, high_shuffled_codes);
 
   // now gather three copies of the lane codes from each lane
-  #[cfg_attr(rustfmt, rustfmt_skip)]
+  #[rustfmt::skip]
     let gather_high = _mm256_setr_epi8(
         -1, 15, 7, -1, -1, -1, -1, -1, -1, -1, 15, 7, -1, -1, -1, -1,
         7, -1, -1, -1, -1, 15, 7, -1, 15, 7, -1, -1, -1, -1, -1, -1,
@@ -321,7 +321,7 @@ unsafe fn decode_block_avx(ptr: &mut *const u8, code: u32) -> __m256i {
   let data = _mm256_or_si256(data1, data2);
 
   *ptr = ptr.offset(len as isize);
-  data.into()
+  data
 }
 
 #[target_feature(enable = "avx2")]
@@ -344,12 +344,12 @@ pub unsafe fn decode_avx(output: &mut [u64], keys: &[u8], data: &[u8]) -> usize 
     ptr::copy_nonoverlapping(keyptr, &mut key as *mut u32 as *mut u8, 3);
     keyptr = keyptr.offset(3);
 
-    debug_assert!(dataptr.offset(32) <= data.as_ptr().offset(data.len() as isize));
+    debug_assert!(dataptr.offset(32) <= data.as_ptr().add(data.len()));
     let values = decode_block_avx(&mut dataptr, key & ((1 << 12) - 1));
     _mm256_storeu_si256(outptr as *mut __m256i, values);
     outptr = outptr.offset(4);
 
-    debug_assert!(dataptr.offset(32) <= data.as_ptr().offset(data.len() as isize));
+    debug_assert!(dataptr.offset(32) <= data.as_ptr().add(data.len()));
     let values = decode_block_avx(&mut dataptr, key >> 12);
     _mm256_storeu_si256(outptr as *mut __m256i, values);
     outptr = outptr.offset(4);
@@ -359,11 +359,11 @@ pub unsafe fn decode_avx(output: &mut [u64], keys: &[u8], data: &[u8]) -> usize 
   let output = slice::from_raw_parts_mut(outptr, output.len() - iters * 8);
   let keys = slice::from_raw_parts(
     keyptr,
-    keys.as_ptr().offset(keys.len() as isize) as usize - keyptr as usize,
+    keys.as_ptr().add(keys.len()) as usize - keyptr as usize,
   );
   let data = slice::from_raw_parts(
     dataptr,
-    data.as_ptr().offset(data.len() as isize) as usize - dataptr as usize,
+    data.as_ptr().add(data.len()) as usize - dataptr as usize,
   );
 
   decode_scalar(output, keys, data) + read
@@ -400,7 +400,8 @@ pub fn decode(output: &mut [u64], buf: &[u8]) -> usize {
     assert!(data.len() >= data_len, "{} < {}", data.len(), data_len);
 
     //if is_x86_feature_detected!("avx2") {
-    let n = {
+
+    {
       #[cfg(target_feature = "avx2")]
       {
         decode_avx(output, keys, data)
@@ -410,8 +411,7 @@ pub fn decode(output: &mut [u64], buf: &[u8]) -> usize {
       {
         decode_scalar(output, keys, data)
       }
-    };
-    n
+    }
   }
 }
 
