@@ -3,6 +3,8 @@ name = "stream-vbyte64"
 version = "0.1.0"
 authors = ["Steven Fackler <sfackler@palantir.com>"]
 edition = "2021"
+description = "stream vbyte for u64"
+license = "MIT"
 
 [dev-dependencies]
 rand = "0.3"
