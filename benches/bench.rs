@@ -15,7 +15,7 @@ fn random_values() -> Vec<u64> {
   (0..4096)
     .map(|_| {
       let bytes = rng.gen_range(0, 9);
-      rng.gen::<u64>() & ((1 << bytes * 8) - 1)
+      rng.gen::<u64>() & ((1 << (bytes * 8)) - 1)
     })
     .collect()
 }
@@ -31,14 +31,14 @@ fn scalar_encode(values: &[u64], b: &mut Bencher) {
   let mut keys = vec![0; stream_vbyte64::keys_len(values.len())];
   let mut data = vec![0; values.len() * 8];
 
-  b.iter(|| unsafe { stream_vbyte64::encode_scalar(&values, &mut keys, &mut data) });
+  b.iter(|| unsafe { stream_vbyte64::encode_scalar(values, &mut keys, &mut data) });
   b.bytes = 8 * values.len() as u64;
 }
 
 fn scalar_decode(values: &[u64], b: &mut Bencher) {
   let mut keys = vec![0; stream_vbyte64::keys_len(values.len())];
   let mut data = vec![0; values.len() * 8];
-  unsafe { stream_vbyte64::encode_scalar(&values, &mut keys, &mut data) };
+  unsafe { stream_vbyte64::encode_scalar(values, &mut keys, &mut data) };
   let mut decoded = vec![0; values.len()];
 
   b.iter(|| unsafe { stream_vbyte64::decode_scalar(&mut decoded, &keys, &data) });
@@ -49,14 +49,14 @@ fn encode(values: &[u64], b: &mut Bencher) {
   let data_len = stream_vbyte64::max_compressed_len(values.len());
   let mut buf = vec![0; data_len];
 
-  b.iter(|| stream_vbyte64::encode(&values, &mut buf));
+  b.iter(|| stream_vbyte64::encode(values, &mut buf));
   b.bytes = 8 * values.len() as u64
 }
 
 fn decode(values: &[u64], b: &mut Bencher) {
   let data_len = stream_vbyte64::max_compressed_len(values.len());
   let mut buf = vec![0; data_len];
-  stream_vbyte64::encode(&values, &mut buf);
+  stream_vbyte64::encode(values, &mut buf);
   let mut decoded = vec![0; values.len()];
 
   b.iter(|| stream_vbyte64::decode(&mut decoded, &buf));
