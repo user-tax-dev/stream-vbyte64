@@ -1,10 +1,11 @@
 [package]
 name = "stream-vbyte64"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Steven Fackler <sfackler@palantir.com>"]
 edition = "2021"
 description = "stream vbyte for u64"
 license = "MIT"
+homepage = "https://github.com/BurntSushi/ripgrep"
 
 [dev-dependencies]
 rand = "0.3"
